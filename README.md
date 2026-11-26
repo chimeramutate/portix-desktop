@@ -5,5 +5,3 @@ The Portix desktop app, written in Rust on [portix-ui](https://github.com/chimer
 ```sh
 cargo run
 ```
-
-Until portix-ui is published, it is a path dependency: clone it next to this repo (`../portix-ui`).

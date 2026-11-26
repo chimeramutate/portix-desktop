@@ -3833,6 +3833,7 @@ dependencies = [
 [[package]]
 name = "portix-ui"
 version = "0.1.0"
+source = "git+https://github.com/chimeramutate/portix-ui?rev=0879a2b355b9a3238e2e58eeb78a06e23cdf0439#0879a2b355b9a3238e2e58eeb78a06e23cdf0439"
 dependencies = [
  "anyhow",
  "portix-gpui",
