@@ -11,5 +11,7 @@ path = "src/main.rs"
 [dependencies]
 # All UI comes from the portix-ui kit; its gpui is reached as `portix_ui::gpui`.
 portix-ui = { git = "https://github.com/chimeramutate/portix-ui", rev = "0879a2b355b9a3238e2e58eeb78a06e23cdf0439" }
+# Local path until portix-terminal is pushed; then swap for a git rev like portix-ui.
+portix-terminal = { path = "../portix-terminal" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

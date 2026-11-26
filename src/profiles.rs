@@ -27,8 +27,6 @@ pub struct Profile {
     pub jump_profile_id: Option<String>,
     #[serde(default)]
     pub forward_agent: bool,
-    // Task 8 reads this for the terminal.
-    #[cfg_attr(not(test), allow(dead_code))]
     #[serde(default)]
     pub terminal_font_size: Option<f32>,
 }

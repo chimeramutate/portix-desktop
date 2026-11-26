@@ -2,8 +2,6 @@ use crate::profiles::Profile;
 
 /// argv for `ssh` (without the program) from a saved profile. Every value
 /// reaching argv is validated: profiles.json is shared and untrusted.
-// Task 8 wires this into the terminal; until then only tests call it.
-#[cfg_attr(not(test), allow(dead_code))]
 pub fn ssh_command(profile: &Profile, all: &[Profile]) -> Result<Vec<String>, String> {
     let (user, host, port) = target(profile, "")?;
     let mut argv = vec!["-p".to_string(), port.to_string()];
