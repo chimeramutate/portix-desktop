@@ -3852,6 +3852,7 @@ dependencies = [
 [[package]]
 name = "portix-terminal"
 version = "0.26.0"
+source = "git+https://github.com/chimeramutate/portix-terminal?rev=7610129b99dbc7e12cfb10a9bd9b75baa719031f#7610129b99dbc7e12cfb10a9bd9b75baa719031f"
 dependencies = [
  "base64",
  "bitflags 2.13.2",

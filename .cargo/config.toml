@@ -1,0 +1,3 @@
+[net]
+# portix-terminal is a private repo; use git CLI so gh credentials work.
+git-fetch-with-cli = true
