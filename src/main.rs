@@ -120,7 +120,7 @@ impl Workspace {
         let Some(profile) = self.visible().get(self.selected).copied() else {
             return;
         };
-        let (name, size) = (profile.name.clone(), profile.terminal_font_size.unwrap_or(13.));
+        let (name, size) = (profile.name.clone(), font_size(profile.terminal_font_size));
         let command = ssh::ssh_command(profile, &self.profiles);
         self.open_error = None;
         let args = match command {
@@ -146,6 +146,10 @@ impl Workspace {
     }
 
     fn close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+        // A fast double click on the close button fires twice for one tab.
+        if ix >= self.sessions.len() {
+            return;
+        }
         self.sessions.remove(ix);
         if self.sessions.is_empty() {
             self.show_profiles(window, cx);
@@ -308,6 +312,11 @@ impl Workspace {
 }
 
 /// Profile colors label profiles; they are never used for interaction.
+/// Terminal font size from profiles.json; 0, negative, NaN or huge sizes hang the UI.
+fn font_size(size: Option<f32>) -> f32 {
+    size.filter(|s| s.is_finite()).unwrap_or(13.).clamp(8., 48.)
+}
+
 fn profile_color(p: &Palette, name: &str) -> u32 {
     match name {
         "cyan" => p.cyan,
@@ -329,6 +338,8 @@ impl Render for Workspace {
         self.cols = ((content_width / 320.) as usize).clamp(1, 6);
 
         div()
+            // A root context, so `!Terminal` holds when focus is on a rail item or button.
+            .key_context("Workspace")
             // Drop the sessions first so every ssh process group gets SIGHUP.
             .on_action(cx.listener(|this, _: &Quit, _, cx| {
                 this.sessions.clear();
@@ -446,4 +457,24 @@ fn main() {
         .expect("failed to open the Portix window");
         cx.activate(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::font_size;
+
+    #[test]
+    fn font_size_is_bounded() {
+        for (input, want) in [
+            (Some(0.), 8.),
+            (Some(-5.), 8.),
+            (Some(f32::NAN), 13.),
+            (Some(f32::INFINITY), 13.),
+            (Some(1000.), 48.),
+            (Some(14.), 14.),
+            (None, 13.),
+        ] {
+            assert_eq!(font_size(input), want, "{input:?}");
+        }
+    }
 }
