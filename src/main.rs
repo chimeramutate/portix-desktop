@@ -1,4 +1,5 @@
 mod profiles;
+mod ssh;
 
 use std::path::PathBuf;
 
