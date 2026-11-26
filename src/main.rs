@@ -1,7 +1,7 @@
 mod profiles;
 mod ssh;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use portix_ui::{self as ui, Icon, Palette, gpui};
 use gpui::{
@@ -9,7 +9,7 @@ use gpui::{
     Subscription, TitlebarOptions, Window, WindowBounds, WindowControlArea, WindowOptions, actions, div,
     point, prelude::*, px, rgb, size,
 };
-use portix_terminal::portix::view::TerminalView;
+use portix_terminal::portix::{session::Session, view::TerminalView};
 use profiles::Profile;
 
 const SSH: &str = "/usr/bin/ssh";
@@ -130,17 +130,14 @@ impl Workspace {
                 return cx.notify();
             }
         };
-        // cx.new cannot return an error, so check the one realistic spawn
-        // failure first. ponytail: other spawn errors (pty exhaustion) panic in
-        // the closure; make TerminalView::new infallible-by-state if that matters.
-        if !Path::new(SSH).exists() {
-            self.open_error = Some((format!("Can't open {name}"), format!("{SSH} was not found.")));
-            return cx.notify();
-        }
-        let view = cx.new(|cx| {
-            TerminalView::new(SSH, &args, size, window, cx)
-                .unwrap_or_else(|e| panic!("could not start {SSH}: {e}"))
-        });
+        let (session, rx) = match Session::spawn(SSH, &args, 80, 24) {
+            Ok(pair) => pair,
+            Err(e) => {
+                self.open_error = Some((format!("Can't open {name}"), e.to_string()));
+                return cx.notify();
+            }
+        };
+        let view = cx.new(|cx| TerminalView::from_session(session, rx, size, window, cx));
         window.focus(&view.focus_handle(cx));
         self.sessions.push(TermSession { name, view });
         self.active_session = self.sessions.len() - 1;
@@ -153,6 +150,9 @@ impl Workspace {
         if self.sessions.is_empty() {
             self.show_profiles(window, cx);
             return;
+        }
+        if ix < self.active_session {
+            self.active_session -= 1;
         }
         self.active_session = self.active_session.min(self.sessions.len() - 1);
         window.focus(&self.sessions[self.active_session].view.focus_handle(cx));
@@ -394,7 +394,11 @@ impl Render for Workspace {
                     .when(show_panel && !terminals, |row| row.child(self.side_panel(p, cx)))
                     .when(show_panel && terminals, |row| row.child(self.session_panel(p, cx)))
                     .child(div().flex_1().min_w_0().child(match self.sessions.get(self.active_session) {
-                        Some(s) if terminals => s.view.clone().into_any_element(),
+                        Some(s) if terminals => div()
+                            .size_full()
+                            .key_context("Terminal")
+                            .child(s.view.clone())
+                            .into_any_element(),
                         _ => div()
                             .size_full()
                             .flex()
@@ -418,8 +422,9 @@ fn main() {
             KeyBinding::new("right", Right, Some("ProfileGrid")),
             KeyBinding::new("up", Up, Some("ProfileGrid")),
             KeyBinding::new("down", Down, Some("ProfileGrid")),
-            KeyBinding::new("tab", Tab, None),
-            KeyBinding::new("shift-tab", TabPrev, None),
+            KeyBinding::new("enter", Open, Some("ProfileGrid")),
+            KeyBinding::new("tab", Tab, Some("!Terminal")),
+            KeyBinding::new("shift-tab", TabPrev, Some("!Terminal")),
             KeyBinding::new("secondary-q", Quit, None),
         ]);
         cx.on_action(|_: &Quit, cx| cx.quit());
