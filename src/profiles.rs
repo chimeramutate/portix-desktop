@@ -5,13 +5,30 @@ use serde::Deserialize;
 /// The slice of a saved SSH profile the UI shows. The file is shared with the
 /// Flutter app (`~/.portix/profiles.json`), so unknown fields are ignored.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Profile {
+    #[serde(default)]
+    pub id: String,
     pub name: String,
     #[serde(default = "default_group")]
     pub group: String,
     /// Profile color name (`green`, `cyan`, `blue`, `pink`, `amber`).
     #[serde(default)]
     pub color: String,
+    #[serde(default)]
+    pub host: String,
+    /// `u32` so one out-of-range port fails only that profile in `ssh.rs`,
+    /// not the load of the whole file.
+    #[serde(default)]
+    pub port: Option<u32>,
+    #[serde(default)]
+    pub username: String,
+    #[serde(default)]
+    pub jump_profile_id: Option<String>,
+    #[serde(default)]
+    pub forward_agent: bool,
+    #[serde(default)]
+    pub terminal_font_size: Option<f32>,
 }
 
 /// The Flutter app's default group.
@@ -48,5 +65,25 @@ mod tests {
         assert!(load(&path).is_err());
 
         fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn loads_real_shape() {
+        let path = std::env::temp_dir().join(format!("portix-shape-{}.json", std::process::id()));
+        fs::write(
+            &path,
+            r#"[{"id":"a","name":"N","group":"G","color":"blue","host":"10.0.0.1","port":22,
+            "username":"ops","authMethod":"key","credentialLabel":"x","jumpProfileId":null,
+            "forwardAgent":false,"terminalFontSize":13.5,"defaultPath":"/","startupCommand":"",
+            "tags":["t"],"status":"ok"},
+            {"id":"b","name":"M","jumpProfileId":"a"}]"#,
+        )
+        .unwrap();
+        let p = load(&path).unwrap();
+        fs::remove_file(&path).unwrap();
+        assert_eq!(p.len(), 2);
+        assert_eq!(p[0].port, Some(22));
+        assert_eq!(p[0].terminal_font_size, Some(13.5));
+        assert_eq!(p[1].jump_profile_id.as_deref(), Some("a"));
     }
 }
